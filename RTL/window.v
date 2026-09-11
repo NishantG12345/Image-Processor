@@ -1,5 +1,5 @@
 module window#(
-    IMAGE_WIDTH = 258
+    parameter IMAGE_WIDTH = 258
     )(
     input clk, 
     input reset,
@@ -7,11 +7,11 @@ module window#(
     input [7:0] prev_prev_row,
     input [7:0] prev_row, 
     input [7:0] current_row,
-    output [7:0] reg pixel00, pixel01,pixel02,
-    output [7:0] reg pixel10, pixel11,pixel12,
-    output [7:0] reg pixel20, pixel21,pixel22,
-    output valid_out
-)
+    output reg [7:0]  pixel00, pixel01,pixel02,
+    output reg [7:0]  pixel10, pixel11,pixel12,
+    output reg [7:0]  pixel20, pixel21,pixel22,
+    output reg valid_out
+);
     reg [7:0] shift_row1 [0:1];
     reg [7:0] shift_row2 [0:1];
     reg [7:0] shift_row3 [0:1];

@@ -1,6 +1,6 @@
 module computation
     (
-    input valid_in;
+    input valid_out,
     input  [7:0] pixel00,pixel01,pixel02,
     input  [7:0] pixel10,pixel11,pixel12, 
     input  [7:0] pixel20,pixel21,pixel22,
@@ -17,7 +17,9 @@ reg signed[10:0] p22;
 
 always @(*) begin
     //to ensure proper signed operations must convert to signed reg first
-    if(valid_in) begin
+    if(valid_out) begin
+        //pad with 3 0s because max value for a sobel 3x3 with pixels from 0-255 can be 1020
+        //this requires 11 bits
         p00 = {3'b000,pixel00};
         p01 = {3'b000,pixel01};
         p02 = {3'b000,pixel02};
@@ -29,8 +31,12 @@ always @(*) begin
         wide_pixel = -wide_pixel;
         if (wide_pixel > 255) begin
         wide_pixel = 255;
-        pixel_out = wide_pixel;
         end
+        pixel_out = wide_pixel;
     end
+    else
+    pixel_out = 0;
+
+
 end
 endmodule
