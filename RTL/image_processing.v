@@ -5,7 +5,8 @@ module image_processing#(
     input valid,
     input rst,
     input [7:0] pixel_in,
-    output [7:0] pixel_out
+    output [7:0] pixel_out, 
+    output valid_out
 );
 wire [7:0] prev_prev_row;
 wire [7:0] prev_row; 
@@ -14,7 +15,6 @@ wire [7:0] pixel00, pixel01,pixel02;
 wire [7:0] pixel10, pixel11,pixel12;
 wire [7:0] pixel20, pixel21,pixel22;
 wire linebuffer_valid;
-wire valid_out;
 linebuffer
     #(
     .IMAGE_WIDTH(IMAGE_WIDTH)
