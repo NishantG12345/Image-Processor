@@ -15,6 +15,10 @@ integer count;
 integer res; 
 integer drain_cycles;
 integer out_file; 
+integer in_cycle;
+integer out_cycle;
+integer latency;
+integer cycle;
 
 image_processing dut(
     .clk(clk),
@@ -34,7 +38,10 @@ initial begin
     rst = 1;
     errors = 0; 
     count = 0; 
-
+    in_cycle = -1;
+    out_cycle = -1;
+    cycle = 0;
+    latency = 0; 
     #20 rst = 0;
 
     pix_file = $fopen("pixel.txt", "r");
@@ -54,6 +61,21 @@ initial begin
 
     @(posedge clk); 
     #1
+    cycle = cycle + 1;
+
+    if(in_cycle == -1 && valid)
+    in_cycle = cycle;
+
+    if(out_cycle == -1 && valid_out) begin
+    out_cycle = cycle;
+    latency = out_cycle - in_cycle;
+    $display("%0d", latency);
+    end
+
+    if(valid_out && count < 10) begin
+    $display("Output %0d at cycle %0d", count, cycle);
+    end
+    
     if(valid_out) begin 
         res = $fscanf(ex_file, "%d", expected); 
         count = count + 1;
@@ -95,9 +117,9 @@ initial begin
     else
         $display("CONGRATS YOU PASSED");
     if(count != 65536)
-    $display("Incorrect number of output pixels :%0d", count);
+        $display("Incorrect number of output pixels :%0d", count);
     else  
-    $display("All good");
-    $finish;
+        $display("All good");
+        $finish;
 end
 endmodule

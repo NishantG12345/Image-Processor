@@ -15,6 +15,7 @@ wire [7:0] pixel00, pixel01,pixel02;
 wire [7:0] pixel10, pixel11,pixel12;
 wire [7:0] pixel20, pixel21,pixel22;
 wire linebuffer_valid;
+wire window_valid;
 linebuffer
     #(
     .IMAGE_WIDTH(IMAGE_WIDTH)
@@ -46,10 +47,10 @@ window #(
     .pixel20(pixel20),
     .pixel21(pixel21),
     .pixel22(pixel22),
-    .valid_out(valid_out)
+    .valid_out(window_valid)
 );
 computation image_computation(
-    .valid_out(valid_out),
+    .valid_in(window_valid),
     .pixel00(pixel00),
     .pixel01(pixel01),
     .pixel02(pixel02),
@@ -59,6 +60,8 @@ computation image_computation(
     .pixel20(pixel20),
     .pixel21(pixel21),
     .pixel22(pixel22),
-    .pixel_out(pixel_out)
+    .pixel_out(pixel_out),
+    .clk(clk),
+    .valid_out(valid_out)
 );
 endmodule

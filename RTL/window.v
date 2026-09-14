@@ -12,16 +12,23 @@ module window#(
     output reg [7:0]  pixel20, pixel21,pixel22,
     output reg valid_out
 );
-    reg [7:0] shift_row1 [0:1];
-    reg [7:0] shift_row2 [0:1];
-    reg [7:0] shift_row3 [0:1];
+    reg [7:0] row1_d1, row1_d2;
+    reg [7:0] row2_d1, row2_d2;
+    reg [7:0] row3_d1, row3_d2;
     reg [8:0] row_count; 
     reg [8:0] col_count;
+    
     always @(posedge clk) begin
         if(reset) begin
-        shift_row1[1] <= 0; shift_row1[0] <= 0;
-        shift_row2[1] <= 0; shift_row2[0] <= 0;
-        shift_row3[1] <= 0; shift_row3[0] <= 0;
+            row1_d1 <= 0;
+            row1_d2 <= 0;
+
+            row2_d1 <= 0;
+            row2_d2 <= 0;
+
+            row3_d1 <= 0;
+            row3_d2 <= 0;
+
         valid_out <= 0; 
         row_count <= 0; col_count <= 0;
         pixel00 <= 0; pixel01 <=0; pixel02 <= 0;
@@ -36,24 +43,28 @@ module window#(
             else begin
                 col_count <= col_count+1;
             end
-            shift_row1[1] <= shift_row1[0];
-            shift_row2[1] <= shift_row2[0];
-            shift_row3[1] <= shift_row3[0];
+            row1_d2 <= row1_d1;
+            row1_d1 <= prev_prev_row;
 
-            shift_row1[0] <= prev_prev_row; 
-            shift_row2[0] <= prev_row;
-            shift_row3[0] <= current_row;
-            pixel00 <= shift_row1[1];
-            pixel01 <= shift_row1[0];
+            row2_d2 <= row2_d1;
+            row2_d1 <= prev_row;
+
+            row3_d2 <= row3_d1;
+            row3_d1 <= current_row;
+
+            pixel00 <= row1_d2;
+            pixel01 <= row1_d1;
             pixel02 <= prev_prev_row;
 
-            pixel10 <= shift_row2[1];
-            pixel11 <= shift_row2[0];
+            pixel10 <= row2_d2;
+            pixel11 <= row2_d1;
             pixel12 <= prev_row;
 
-            pixel20 <= shift_row3[1];
-            pixel21 <= shift_row3[0];
+            pixel20 <= row3_d2;
+            pixel21 <= row3_d1;
             pixel22 <= current_row;
+
+
             if(row_count >= 2 && col_count >= 2) begin
                 valid_out<=1;
             end
