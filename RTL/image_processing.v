@@ -75,6 +75,7 @@ computation image_computation(
     .pixel12(pixel12),
     .pixel20(pixel20),
     .pixel21(pixel21),
+    .rst(rst),
     .pixel22(pixel22),
     .pixel_out(m_axis_tdata),
     .enable(enable_pipeline),
