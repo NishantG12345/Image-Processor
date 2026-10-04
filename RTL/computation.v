@@ -4,6 +4,7 @@ module computation
     input  [7:0] pixel00,pixel01,pixel02,
     input  [7:0] pixel10,pixel11,pixel12, 
     input  [7:0] pixel20,pixel21,pixel22,
+    input enable,
     input clk,
     output reg [7:0] pixel_out,
     output reg valid_out
@@ -36,7 +37,8 @@ assign top = -p00 - (p01 << 1) - p02;
 assign bottom =  p20 + (p21 << 1) + p22;
 
 always @(posedge clk) begin
-        
+
+    if(enable) begin       
         wide_pixel <= top + bottom;
         valid1 <= valid_in;
   
@@ -54,4 +56,5 @@ always @(posedge clk) begin
         end
         valid_out <= valid2;
     end
+end
 endmodule

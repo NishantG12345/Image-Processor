@@ -1,125 +1,149 @@
 module image_processing_tb;
 
-reg clk; 
-reg valid;
-reg rst; 
-reg [7:0] pixel_in;
-wire [7:0] pixel_out;
-wire valid_out;
-integer pix; 
-integer expected;
-integer pix_file; 
-integer ex_file; 
-integer errors; 
-integer count;
-integer res; 
-integer drain_cycles;
-integer out_file; 
-integer in_cycle;
-integer out_cycle;
-integer latency;
-integer cycle;
+parameter IMAGE_WIDTH = 258;
+localparam OUTPUT_WIDTH = IMAGE_WIDTH - 2;
+localparam INPUT_PIXELS = IMAGE_WIDTH * IMAGE_WIDTH;
+localparam OUTPUT_PIXELS = OUTPUT_WIDTH * OUTPUT_WIDTH;
+reg clk;
+reg rst;
+reg s_axis_tvalid;
+reg [7:0] s_axis_tdata;
+wire s_axis_tready;
 
-image_processing dut(
+wire [7:0] m_axis_tdata;
+wire m_axis_tvalid;
+reg m_axis_tready;
+
+integer pix;
+integer expected;
+integer pix_file;
+integer ex_file;
+integer out_file;
+integer res;
+integer errors;
+integer input_count;
+integer output_count;
+integer drain_cycles;
+
+image_processing #(
+    .IMAGE_WIDTH(IMAGE_WIDTH)
+) dut (
     .clk(clk),
-    .valid(valid),
     .rst(rst),
-    .pixel_in(pixel_in),
-    .pixel_out(pixel_out),
-    .valid_out(valid_out)
-); 
+    .s_axis_tvalid(s_axis_tvalid),
+    .s_axis_tdata(s_axis_tdata),
+    .s_axis_tready(s_axis_tready),
+    .m_axis_tdata(m_axis_tdata),
+    .m_axis_tvalid(m_axis_tvalid),
+    .m_axis_tready(m_axis_tready)
+);
 
 always #5 clk = ~clk;
-
 initial begin
     clk = 0;
-    valid = 0; 
-    pixel_in = 0; 
     rst = 1;
-    errors = 0; 
-    count = 0; 
-    in_cycle = -1;
-    out_cycle = -1;
-    cycle = 0;
-    latency = 0; 
-    #20 rst = 0;
+    s_axis_tvalid = 0;
+    s_axis_tdata = 0;
+    m_axis_tready = 1;
+    errors = 0;
+    input_count = 0;
+    output_count = 0;
+    drain_cycles = 0;
 
     pix_file = $fopen("pixel.txt", "r");
     ex_file = $fopen("expected.txt", "r");
     out_file = $fopen("output.txt", "w");
 
-    if(pix_file == 0 || ex_file == 0) begin
-        $display("issue loading files");
+    if (pix_file == 0 || ex_file == 0|| out_file == 0) begin
+        $display("Error opening files");
         $finish;
     end
-    
+    #20;
+    rst = 0;
     res = $fscanf(pix_file, "%d", pix);
-    pixel_in = pix;
-    valid = 1;
-
-    repeat(66564) begin
-
-    @(posedge clk); 
-    #1
-    cycle = cycle + 1;
-
-    if(in_cycle == -1 && valid)
-    in_cycle = cycle;
-
-    if(out_cycle == -1 && valid_out) begin
-    out_cycle = cycle;
-    latency = out_cycle - in_cycle;
-    $display("%0d", latency);
+    if (res == 1) begin
+        s_axis_tdata = pix;
+        s_axis_tvalid = 1;
     end
 
-    if(valid_out && count < 10) begin
-    $display("Output %0d at cycle %0d", count, cycle);
-    end
-    
-    if(valid_out) begin 
-        res = $fscanf(ex_file, "%d", expected); 
-        count = count + 1;
-        $fwrite(out_file, "%0d\n", pixel_out);
-        if(pixel_out !== expected) begin
-            $display("Pixel out(%0d) did NOT match expected(%0d)", pixel_out, expected);
-            errors = errors + 1; 
-        end
-    end
-    res = $fscanf(pix_file, "%d", pix);
-    pixel_in = pix;
-    end
-    valid = 0;
-
-
-    drain_cycles = 0;
-
-    while (count < 65536 && drain_cycles < 200) begin
+    while (input_count < INPUT_PIXELS) begin
         @(posedge clk);
         #1;
-        if(valid_out) begin 
-            res = $fscanf(ex_file, "%d", expected); 
-            count = count + 1;
-            $fwrite(out_file, "%0d\n", pixel_out);
-            if(pixel_out !== expected) begin
-                $display("Pixel out(%0d) did NOT match expected(%0d)", pixel_out, expected);
-                errors = errors + 1; 
+        if (m_axis_tvalid && m_axis_tready) begin
+            res = $fscanf(ex_file, "%d", expected);
+            if (res != 1) begin
+                $display("Expected output file ended early");
+                $finish;
+            end
+            if (m_axis_tdata !== expected) begin
+                $display(
+                    "Output %0d: got %0d, expected %0d",
+                    output_count,
+                    m_axis_tdata,
+                    expected
+                );
+                errors = errors + 1;
+            end
+            $fwrite(out_file, "%0d\n", m_axis_tdata);
+            output_count = output_count + 1;
+        end
+        if (s_axis_tvalid && s_axis_tready) begin
+            input_count = input_count + 1;
+            if (input_count < INPUT_PIXELS) begin
+                res = $fscanf(pix_file, "%d", pix);
+                if (res != 1) begin
+                    $display("Input file ended early");
+                    $finish;
+                end
+                s_axis_tdata = pix;
+            end
+            else begin
+                s_axis_tvalid = 0;
             end
         end
+    end
+    while (output_count < OUTPUT_PIXELS && drain_cycles < 1000) begin
+        @(posedge clk);
+        #1;
+        if (m_axis_tvalid && m_axis_tready) begin
+            res = $fscanf(ex_file, "%d", expected);
+            if (res != 1) begin
+                $display("Expected output file ended early");
+                $finish;
+            end
+
+            if (m_axis_tdata !== expected) begin
+                $display(
+                    "Output %0d: got %0d, expected %0d",
+                    output_count,
+                    m_axis_tdata,
+                    expected
+                );
+                errors = errors + 1;
+            end
+
+            $fwrite(out_file, "%0d\n", m_axis_tdata);
+            output_count = output_count + 1;
+
+        end
         drain_cycles = drain_cycles + 1;
+
     end
 
     $fclose(pix_file);
     $fclose(ex_file);
     $fclose(out_file);
-    if(errors > 0) begin
-        $display("you did NOT pass all cases");
-    end
+    $display("Successful inputs:  %0d / %0d", input_count, INPUT_PIXELS);
+    $display("Succesful Outputs: %0d / %0d", output_count, OUTPUT_PIXELS);
+    $display("Errors:              %0d", errors);
+    if (input_count != INPUT_PIXELS)
+        $display("Wrong number of inputs sent!");
+    else if (output_count != OUTPUT_PIXELS)
+        $display("Wrong number of outputs sent!");
+    else if (errors != 0)
+        $display("There are some errors!");
     else
-        $display("CONGRATS YOU PASSED");
-    if(count != 65536)
-        $display("Incorrect number of output pixels :%0d", count);
-    else  
-        $display("All good");
-        $finish;
+        $display("All outputs matched! lets go");
+    $finish;
 end
 endmodule
